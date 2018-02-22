@@ -13,7 +13,7 @@
 # limitations under the License.
 
 _variables:
-  from: &from gcr.io/google-appengine/openjdk
+  from: &from gcr.io/google-appengine/openjdk:9
   gosu: &gosu
     version: '1.10'
     gpg: B42F6819007F00F88E364FD4036A9C25BF357DD4

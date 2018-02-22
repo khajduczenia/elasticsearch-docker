@@ -6,7 +6,11 @@ FROM {{ .From }}
 # add gosu for easy step-down from root
 ENV GOSU_VERSION {{ $gosu.Version }}
 RUN set -x \
-	&& wget -q -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$(dpkg --print-architecture)" \
+        && apt-get update \
+	&& apt --fix-broken install -y \
+	&& apt-get install -y gpg \
+	&& apt-get install -y wget \
+        && wget -q -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$(dpkg --print-architecture)" \
 	&& wget -q -O /usr/local/bin/gosu.asc "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$(dpkg --print-architecture).asc" \
 # copy source code
 	&& wget -q -O /usr/local/src/gosu.tar.gz "https://github.com/tianon/gosu/archive/$GOSU_VERSION.tar.gz" \
@@ -35,12 +39,25 @@ RUN set -x \
 # Install Elastic Search
 RUN set -ex; \
 # https://artifacts.elastic.co/GPG-KEY-elasticsearch
-	key='{{ $elasticsearch.Gpg }}'; \
-	export GNUPGHOME="$(mktemp -d)"; \
-	gpg --keyserver pgp.mit.edu --recv-keys "$key"; \
-	gpg --export "$key" > /etc/apt/trusted.gpg.d/elastic.gpg; \
-	rm -r "$GNUPGHOME"; \
-	apt-key list
+	key='{{ $elasticsearch.Gpg }}' \
+	&& export GNUPGHOME="$(mktemp -d)" \
+	&& export found='' \
+	&& for server in \
+		pool.sks-keyservers.net \
+		ha.pool.sks-keyservers.net \
+		pgp.mit.edu \
+		na.pool.sks-keyservers.net \
+		eu.pool.sks-keyservers.net \
+		oc.pool.sks-keyservers.net \
+		ha.pool.sks-keyservers.net \
+		hkp://p80.pool.sks-keyservers.net:80 \
+		hkp://keyserver.ubuntu.com:80 \
+	; do \
+		gpg --keyserver $server --recv-keys "$key" \
+                && export found="yes" && break; \
+	done; test -n "$found" \
+	&& gpg --export "$key" > /etc/apt/trusted.gpg.d/elastic.gpg \
+	&& rm -r "$GNUPGHOME"
 
 # https://www.elastic.co/guide/en/elasticsearch/reference/current/setup-repositories.html
 RUN set -x \
